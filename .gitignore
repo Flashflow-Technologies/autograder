@@ -1,0 +1,64 @@
+# ─── Dependencies ───────────────────────────────────────────
+node_modules/
+**/node_modules/
+.npm/
+.pnp/
+.pnp.js
+
+# ─── Secrets / environment ──────────────────────────────────
+# Real env files must never be committed. The *.example templates ARE committed.
+.env
+.env.*
+!.env.example
+!**/.env.example
+**/.env
+!**/.env.example
+
+# ─── Logs ───────────────────────────────────────────────────
+logs/
+server/logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── Build output ───────────────────────────────────────────
+dist/
+build/
+client/dist/
+*.local
+
+# ─── Python (AI service) ────────────────────────────────────
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# ─── Docker / runtime data ──────────────────────────────────
+# Named volumes live in Docker, not the repo, but ignore any local data dirs
+mongo_data/
+*.pid
+
+# ─── OS / editor cruft ──────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~
+
+# ─── Misc ───────────────────────────────────────────────────
+coverage/
+.cache/
+tmp/
+
+# Keep the logs directory in the repo (compose mounts it) but ignore its contents
+!server/logs/.gitkeep
+
+# Vendor licensing private keys — NEVER commit
+*.pem
+vendor_private.pem
+vendor_public.pem

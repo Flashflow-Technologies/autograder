@@ -1,0 +1,111 @@
+# Runs the entire stack on free, self-hosted services — no cloud costs,
+# no storage caps, no cold starts. Ideal for running during actual exams.
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports: ["27017:27017"]
+    volumes: ["mongo_data:/data/db"]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports: ["6379:6379"]
+
+  # --- Judge0: sandboxed code execution for programming questions ---
+  # Judge0 runs untrusted student code inside isolated cgroups with CPU/memory/
+  # time/process limits. It needs its own Postgres and Redis.
+  judge0-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=judge0pass
+      - POSTGRES_DB=judge0
+    volumes: ["judge0_db:/var/lib/postgresql/data"]
+
+  judge0-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "no"]
+
+  judge0:
+    image: judge0/judge0:1.13.1
+    restart: unless-stopped
+    privileged: true   # required for the isolate sandbox (cgroup control)
+    ports: ["2358:2358"]
+    depends_on:
+      judge0-db: { condition: service_started }
+      judge0-redis: { condition: service_started }
+    environment:
+      - POSTGRES_HOST=judge0-db
+      - POSTGRES_DB=judge0
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=judge0pass
+      - REDIS_HOST=judge0-redis
+      # Sandbox safety limits (defence-in-depth; per-submission limits also sent)
+      - MAX_CPU_TIME_LIMIT=15
+      - MAX_WALL_TIME_LIMIT=20
+      - MAX_MEMORY_LIMIT=512000
+      - MAX_PROCESSES_AND_OR_THREADS=60
+      - ENABLE_NETWORK=false   # student code gets NO network access
+      - ALLOW_ENABLE_NETWORK=false
+
+  ai-service:
+    build: ./ai-service
+    restart: unless-stopped
+    ports: ["8000:8000"]
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 120s
+    # First run downloads the ~80MB embedding model; cached thereafter
+
+  server:
+    build: ./server
+    restart: unless-stopped
+    ports: ["5000:5000"]
+    depends_on:
+      mongo: { condition: service_started }
+      redis: { condition: service_started }
+    environment:
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://mongo:27017/exam_eval
+      - REDIS_HOST=redis
+      - AI_SERVICE_URL=http://ai-service:8000
+      - JUDGE0_URL=http://judge0:2358
+      - JWT_SECRET=${JWT_SECRET:-change_me}
+    volumes: ["./server/logs:/app/logs"]
+
+  worker:
+    build: ./server
+    restart: unless-stopped
+    command: ["node", "src/worker.js"]
+    depends_on:
+      mongo: { condition: service_started }
+      redis: { condition: service_started }
+      ai-service: { condition: service_healthy }
+      judge0: { condition: service_started }
+    environment:
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://mongo:27017/exam_eval
+      - REDIS_HOST=redis
+      - AI_SERVICE_URL=http://ai-service:8000
+      - JUDGE0_URL=http://judge0:2358
+      - JWT_SECRET=${JWT_SECRET:-change_me}
+      - SCORING_CONCURRENCY=2
+      - EMAIL_CONCURRENCY=3
+    volumes: ["./server/logs:/app/logs"]
+
+  client:
+    build: ./client
+    restart: unless-stopped
+    depends_on: [server]
+    ports: ["8080:80"]
+
+volumes:
+  mongo_data:
+  judge0_db:
