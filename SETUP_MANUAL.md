@@ -28,13 +28,13 @@ free, open-source tools — no paid services or API keys.
 
 ### Steps
 
-1. **Unzip** the project and open a terminal in the `exam-eval-system` folder.
+1. **Unzip** the project and open a terminal in the `autograder` folder.
 
 2. **Create the server env file:**
    ```bash
    cp server/.env.example server/.env
    ```
-   Open `server/.env` and set a strong `JWT_SECRET` (any long random string).
+   Open `server/.env` and set a strong `JWT_SECRET` (any long random string:kdg345jcmfjhkyuerqgabasfcd5374jdjhgfhdgb375456wvbcnjfh39890ggdg).
    Email is optional — leave SMTP blank and emails are just logged.
 
 3. **Build and start everything:**
