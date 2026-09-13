@@ -60,12 +60,3 @@ scoring (sentence embeddings / cosine similarity), all self-hostable.
 ## Running
 
     docker compose up --build
-
-## Notes
-
-This project was derived from a larger outcome-based-education platform by
-removing all OBE/accreditation features (CO/PO attainment, articulation
-matrices, practical/SEE attainment, rubric-based assignment grading) and keeping
-only the automated descriptive-answer evaluation pipeline. Question-level topic
-tags (CO / Bloom's level) remain available as optional metadata but are not
-required and do not drive any computation.
